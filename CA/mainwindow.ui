@@ -65,10 +65,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Соседей для смерти:</string>
+     <string>Соседей для жизни:</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_L">
+   <widget class="QTextEdit" name="liveTextEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -106,7 +106,7 @@ p, li { white-space: pre-wrap; }
      <string>Соседей для оживления:</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_A">
+   <widget class="QTextEdit" name="aliveTextEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -144,7 +144,7 @@ p, li { white-space: pre-wrap; }
      <string>Время жизни клетки:</string>
     </property>
    </widget>
-   <widget class="QTextEdit" name="textEdit_C">
+   <widget class="QTextEdit" name="lifetimeTextEdit">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -172,14 +172,14 @@ p, li { white-space: pre-wrap; }
    <widget class="QPushButton" name="loadFile">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>0</x>
       <y>140</y>
-      <width>131</width>
+      <width>141</width>
       <height>27</height>
      </rect>
     </property>
     <property name="text">
-     <string>Выбрать файл</string>
+     <string>Выбрать файл с данными</string>
     </property>
    </widget>
    <widget class="QPushButton" name="stop">

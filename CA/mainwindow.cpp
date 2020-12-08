@@ -41,22 +41,23 @@ void MainWindow::on_stop_clicked()
 void MainWindow::on_step_by_step_clicked()
 {
     ui->loadFile->setEnabled(false);//Делаем кнопку loadFile не активной
-    ui->textEdit_A->setEnabled(false);//Делаем строку ввода textEdit_A не активной
-    ui->textEdit_C->setEnabled(false);//Делаем строку ввода textEdit_C не активной
-    ui->textEdit_L->setEnabled(false);//Делаем строку ввода textEdit_L не активной
+    ui->aliveTextEdit->setEnabled(false);//Делаем строку ввода aliveTextEdit не активной
+    ui->lifetimeTextEdit->setEnabled(false);//Делаем строку ввода lifetimeTextEdit не активной
+    ui->liveTextEdit->setEnabled(false);//Делаем строку ввода liveTextEdit не активной
 
     //Если данные не полученны, то пытаемся их получить
-    if(!haveData) { getData(); haveData = true; }
-    draw();//Рисуем поле
-    logic();//Обрабатываем логику
+    if(!haveData) {
+        getData();
+        haveData = true;
+    }
+
+    draw();//Графический вывод
+    core();//Ядро программы(логика выполнения)
 }
 
 //Рисование "сетки"
 void MainWindow::drawGrid()
 {
-    painter->fillRect(painter->viewport(), QColor(255,255,255));//Заполняем весь видимый прямоугольник белым цветом
-    painter->setPen(QColor(0, 0, 0));//Устанавливаем перо чёрного цвета
-
     //Ресуем клетки
     for(int i = 0; i < sizeGrid; i++)
     {
@@ -69,17 +70,18 @@ void MainWindow::drawGrid()
 //Рисование живых и мёртвых клеток
 void MainWindow::draw()
 {
-    painter->setPen(Qt::gray);//Устанавливаем перу серый цвет
+    painter->setPen(QColor(105, 105, 105));//Устанавливаем перу тёмно-серый цвет
+    drawGrid();//Рисуем сетку
 
     //Процесс отметки мертвых и живых клеток
     for(int i = 0; i < sizeGrid; i++)
         for(int j = 0; j < sizeGrid; j++)
         {
             //Если соответствующий элемент массива "мертвый" устанавливаем чёрный цвет
-            if (array[i][j] == 0) painter->setBrush (Qt::black);
-            //Если соответствующий элемент массива "живой", то устанавливаем красный цвет
+            if (array[i][j] == 0) painter->setBrush (QColor(0, 0, 0));
+            //Если соответствующий элемент массива "живой", то устанавливаем жёлтый цвет
             else{
-                painter->setBrush (QColor(255, 200, 0));}
+                painter->setBrush (QColor(255, 255, 0));}
 
             //Закрашиваем клетки
             painter->drawRect(i*(ui->label->width())/sizeGrid, j*(ui->label->height())/sizeGrid, (ui->label->width())/sizeGrid + 1, (ui->label->height())/sizeGrid + 1);
@@ -92,23 +94,15 @@ void MainWindow::draw()
 void MainWindow::getData()
 {
     //Получаем количество "живых" соседей, при котором клетка остается "в живых", в виде строки
-    sL = ui->textEdit_L->toPlainText();
+    sAlive = ui->liveTextEdit->toPlainText();
     //Получаем количество "живых" соседей при котором "мертвая" клетка становится "живой", в виде строки
-    sA = ui->textEdit_A->toPlainText();
+    sRevival = ui->aliveTextEdit->toPlainText();
 
-    //Переносим все цифры из строки в вектор
-    for(int i = 0; i < sL.length(); i++)
-    {
-        iL.push_back(sL[i].toLatin1()-48);//Цифры в Latin1 имеют номера от 48 до 57. При переводе строки в цифры мы получаем номер символа в этой кодировке(т.е. число от 48 до 57), для того чтобы получить искомое число отнимаю 48
-    }
+    alive = sAlive.toInt();
 
-    //Переносим все цифры из строки в вектор
-    for(int i = 0; i < sA.length(); i++)
-    {
-        iA.push_back(sA[i].toLatin1()-48);//Цифры в Latin1 имеют номера от 48 до 57. При переводе строки в цифры мы получаем номер символа в этой кодировке(т.е. число от 48 до 57), для того чтобы получить искомое число отнимаю 48
-    }
+    revival = sRevival.toInt();
 
-    iC = (ui->textEdit_C->toPlainText()).toInt();//Получаю продолжительность жизни клетки
+    lifetime = (ui->lifetimeTextEdit->toPlainText()).toInt();//Получаю продолжительность жизни клетки
 
     QVector<QString> str;//Строки, которые будут хранить данные из файла
     QFile file(fileName);//Файл с данными
@@ -136,7 +130,7 @@ void MainWindow::getData()
         //Для каждого элемента из строки
         for(int j = 0; j < sizeGrid; j++)
         {
-            if(list[j].toInt() >= iC){array[j][i]=iC+1;}//iC+1 - это метка, что клетка живая(не умирающая и не мёртвая)
+            if(list[j].toInt() >= lifetime){array[j][i]=lifetime+1;}//iC+1 - это метка, что клетка живая(не умирающая и не мёртвая)
             else array[j][i] = list[j].toInt();//Заношу умирающие и мёртвые клетки в массив
         }
     }
@@ -151,55 +145,51 @@ void MainWindow::switchArray()
 }
 
 //Логика
-void MainWindow::logic()
+void MainWindow::core()
 {
-    int alive;//Живые клетки и рожденные клетки
+    int Malive;//Живые клетки
 
     //Перебираем все элементы поля
     for(int i = 0; i < sizeGrid; i++)
     {
         for(int j = 0; j < sizeGrid; j++)
         {
-            alive = 0;//Живых соседей
+            Malive = 0;//Живых соседей
 
             //Выясняем сколько живых соседей у клетки
-            if(i != 0 && j != 0 && array[i - 1][j - 1] == iC + 1) { alive++; }
-            if(i != 0 && array[i - 1][j] == iC + 1) { alive++; }
-            if(i != 0 && j != sizeGrid - 1 && array[i - 1][j + 1] == iC + 1) { alive++; }
-            if(j != 0 && array[i][j - 1] == iC + 1) { alive++; }
-            if(j != sizeGrid - 1 && array[i][j + 1] == iC + 1) { alive++; }
-            if(i != sizeGrid - 1 && j != 0 && array[i + 1][j - 1] == iC + 1) { alive++; }
-            if(i != sizeGrid - 1 && array[i + 1][j] == iC + 1) { alive++; }
-            if(i != sizeGrid - 1 && j != sizeGrid - 1 && array[i + 1][j + 1] == iC + 1) { alive++; }
+            if(i != 0 && j != 0 && array[i - 1][j - 1] == lifetime + 1) { Malive++; }
+            if(i != 0 && array[i - 1][j] == lifetime + 1) { Malive++; }
+            if(i != 0 && j != sizeGrid - 1 && array[i - 1][j + 1] == lifetime + 1) { Malive++; }
+            if(j != 0 && array[i][j - 1] == lifetime + 1) { Malive++; }
+            if(j != sizeGrid - 1 && array[i][j + 1] == lifetime + 1) { Malive++; }
+            if(i != sizeGrid - 1 && j != 0 && array[i + 1][j - 1] == lifetime + 1) { Malive++; }
+            if(i != sizeGrid - 1 && array[i + 1][j] == lifetime + 1) { Malive++; }
+            if(i != sizeGrid - 1 && j != sizeGrid - 1 && array[i + 1][j + 1] == lifetime + 1) { Malive++; }
 
             bool test1 = false;//Достаточно ли у клетки соседей, чтобы она умерла
 
-            for(int k = 0; k < iL.size(); k++)
-                //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка не умирает
-                if (alive == iL[k])
-                {
-                    test1 = true;//Тест пройден
-                    break;
-                }
+            //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка не умирает
+            if (Malive == alive)
+            {
+                test1 = true;//Тест пройден
+            }
 
-            if ((test1 && array[i][j] == iC+1)|| array[i][j] == 0)
+            if ((test1 && array[i][j] == lifetime+1)|| array[i][j] == 0)
                 newArray[i][j] = array[i][j];//Если тест пройден и клетка не умирающая или клетка уже мёртвая, то ничего не происходит
             else
                 newArray[i][j] = array[i][j] - 1;//Если тест не пройден и клетка умирающая, но не мёртвая, то отнимаем у неё жизнь
 
             bool test2 = false;//Достаточно ли у клетки соседей, чтобы она родилась
 
-            for(int k = 0; k < iA.size(); k++)
-                //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка рождается
-                if (alive == iA[k])
-                {
-                    test2 = true;//то тест пройден
-                    break;
-                }
+            //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка рождается
+            if (Malive == revival)
+            {
+                test2 = true;//то тест пройден
+            }
 
             //Если тест пройден и клетка свободная(мёртвая)
             if (test2 == true && array[i][j] == 0)
-                newArray[i][j] = iC+1;//То оживляем её с меткой живой клетки
+                newArray[i][j] = lifetime+1;//То оживляем её с меткой живой клетки
             //Если тест не пройден, или клетка не свободна
             else if(array[i][j] == 0)
                 newArray[i][j] = 0;//то ничего не происходит
@@ -227,4 +217,6 @@ MainWindow::~MainWindow()
     delete [] array;
     delete [] newArray;
 }
+
+
 
