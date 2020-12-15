@@ -8,7 +8,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),ui(new Ui::MainWin
     fileName = "file.txt";//Файл данных
     pm = new QPixmap(QSize(ui->label->width(), ui->label->height()));//Создает растровое изображение заданного размера QSize
     painter = new QPainter(pm);//Создаём "рисовалку"
-    painter->fillRect(painter->viewport(), QColor(255,255,255));//Заполняет весь видимый прямоугольник белым цветом
     ui->label->setPixmap(*pm);//Обновляем растровое изображение
     haveData = false;//Полученны ли данные?
     timer = new QTimer(this);//Создание таймера
@@ -41,9 +40,6 @@ void MainWindow::on_stop_clicked()
 void MainWindow::on_step_by_step_clicked()
 {
     ui->loadFile->setEnabled(false);//Делаем кнопку loadFile не активной
-    ui->aliveTextEdit->setEnabled(false);//Делаем строку ввода aliveTextEdit не активной
-    ui->lifetimeTextEdit->setEnabled(false);//Делаем строку ввода lifetimeTextEdit не активной
-    ui->liveTextEdit->setEnabled(false);//Делаем строку ввода liveTextEdit не активной
 
     //Если данные не полученны, то пытаемся их получить
     if(!haveData) {
@@ -58,7 +54,7 @@ void MainWindow::on_step_by_step_clicked()
 //Рисование "сетки"
 void MainWindow::drawGrid()
 {
-    //Ресуем клетки
+    //Рисуем клетки
     for(int i = 0; i < sizeGrid; i++)
     {
         painter->drawLine(0, i*(ui->label->height())/sizeGrid, ui->label->width(), i*(ui->label->height())/sizeGrid);//Для каждой "строки" рисуем линию от левого края строки до правого края
@@ -93,16 +89,8 @@ void MainWindow::draw()
 //Получение данных
 void MainWindow::getData()
 {
-    //Получаем количество "живых" соседей, при котором клетка остается "в живых", в виде строки
-    sAlive = ui->liveTextEdit->toPlainText();
-    //Получаем количество "живых" соседей при котором "мертвая" клетка становится "живой", в виде строки
-    sRevival = ui->aliveTextEdit->toPlainText();
-
-    alive = sAlive.toInt();
-
-    revival = sRevival.toInt();
-
-    lifetime = (ui->lifetimeTextEdit->toPlainText()).toInt();//Получаю продолжительность жизни клетки
+    alive1 = 3;//Количество клеток для жизни/рождения новой клетки
+    alive2 = 2;//Количество клеток для жизни
 
     QVector<QString> str;//Строки, которые будут хранить данные из файла
     QFile file(fileName);//Файл с данными
@@ -130,8 +118,8 @@ void MainWindow::getData()
         //Для каждого элемента из строки
         for(int j = 0; j < sizeGrid; j++)
         {
-            if(list[j].toInt() >= lifetime){array[j][i]=lifetime+1;}//iC+1 - это метка, что клетка живая(не умирающая и не мёртвая)
-            else array[j][i] = list[j].toInt();//Заношу умирающие и мёртвые клетки в массив
+            if(list[j].toInt() == 1){array[j][i]=1;}// метка, что клетка живая
+            else array[j][i] = 0;//Заношу умирающие и мёртвые клетки в массив
         }
     }
 }
@@ -157,39 +145,39 @@ void MainWindow::core()
             Malive = 0;//Живых соседей
 
             //Выясняем сколько живых соседей у клетки
-            if(i != 0 && j != 0 && array[i - 1][j - 1] == lifetime + 1) { Malive++; }
-            if(i != 0 && array[i - 1][j] == lifetime + 1) { Malive++; }
-            if(i != 0 && j != sizeGrid - 1 && array[i - 1][j + 1] == lifetime + 1) { Malive++; }
-            if(j != 0 && array[i][j - 1] == lifetime + 1) { Malive++; }
-            if(j != sizeGrid - 1 && array[i][j + 1] == lifetime + 1) { Malive++; }
-            if(i != sizeGrid - 1 && j != 0 && array[i + 1][j - 1] == lifetime + 1) { Malive++; }
-            if(i != sizeGrid - 1 && array[i + 1][j] == lifetime + 1) { Malive++; }
-            if(i != sizeGrid - 1 && j != sizeGrid - 1 && array[i + 1][j + 1] == lifetime + 1) { Malive++; }
+            if(i != 0 && j != 0 && array[i - 1][j - 1] == 1 ) { Malive++; }
+            if(i != 0 && array[i - 1][j] == 1 ) { Malive++; }
+            if(i != 0 && j != sizeGrid - 1 && array[i - 1][j + 1] == 1 ) { Malive++; }
+            if(j != 0 && array[i][j - 1] == 1 ) { Malive++; }
+            if(j != sizeGrid - 1 && array[i][j + 1] == 1 ) { Malive++; }
+            if(i != sizeGrid - 1 && j != 0 && array[i + 1][j - 1] == 1 ) { Malive++; }
+            if(i != sizeGrid - 1 && array[i + 1][j] == 1 ) { Malive++; }
+            if(i != sizeGrid - 1 && j != sizeGrid - 1 && array[i + 1][j + 1] == 1 ) { Malive++; }
 
-            bool test1 = false;//Достаточно ли у клетки соседей, чтобы она умерла
+            bool test1 = false;//Достаточно ли у клетки соседей, чтобы она не умерла
 
-            //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка не умирает
-            if (Malive == alive)
+            //Если количество живых соседей у клетки соответствует значению при котором клетка не умирает
+            if ((Malive == alive1) || (Malive ==alive2))
             {
                 test1 = true;//Тест пройден
             }
 
-            if ((test1 && array[i][j] == lifetime+1)|| array[i][j] == 0)
+            if ((test1 && array[i][j] == 1)|| array[i][j] == 0)
                 newArray[i][j] = array[i][j];//Если тест пройден и клетка не умирающая или клетка уже мёртвая, то ничего не происходит
             else
-                newArray[i][j] = array[i][j] - 1;//Если тест не пройден и клетка умирающая, но не мёртвая, то отнимаем у неё жизнь
+                newArray[i][j] = 0;//Если тест не пройден, то убиваем клетку
 
             bool test2 = false;//Достаточно ли у клетки соседей, чтобы она родилась
 
-            //Если количество живых соседей у клетки соответствует хотя бы одному из значений при которых клетка рождается
-            if (Malive == revival)
+            //Если количество живых соседей у клетки соответствует значению при котором клетка рождается
+            if (Malive == alive1)
             {
                 test2 = true;//то тест пройден
             }
 
-            //Если тест пройден и клетка свободная(мёртвая)
-            if (test2 == true && array[i][j] == 0)
-                newArray[i][j] = lifetime+1;//То оживляем её с меткой живой клетки
+            //Если тест пройден и клетка мёртвая
+            if (test2 && array[i][j] == 0)
+                newArray[i][j] = 1;//То оживляем её с меткой живой клетки
             //Если тест не пройден, или клетка не свободна
             else if(array[i][j] == 0)
                 newArray[i][j] = 0;//то ничего не происходит
