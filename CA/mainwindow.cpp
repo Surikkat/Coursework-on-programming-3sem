@@ -205,6 +205,3 @@ MainWindow::~MainWindow()
     delete [] array;
     delete [] newArray;
 }
-
-
-
