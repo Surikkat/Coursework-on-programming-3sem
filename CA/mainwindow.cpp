@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "qcustomplot.h"
 
 //Конструктор
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),ui(new Ui::MainWindow)
@@ -11,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),ui(new Ui::MainWin
     ui->label->setPixmap(*pm);//Обновляем растровое изображение
     haveData = false;//Полученны ли данные?
     timer = new QTimer(this);//Создание таймера
+    numberOfCells=0;//Изначально количество живих клеток - 0
+    step = 0;
 }
 
 //Обработка нажатия на кнопку загрузки файла
@@ -48,7 +51,40 @@ void MainWindow::on_step_by_step_clicked()
     }
 
     draw();//Графический вывод
+    drawGraph();//Обновляем график
     core();//Ядро программы(логика выполнения)
+    step++;
+}
+
+//Рисуем график
+void MainWindow::drawGraph(){
+
+    double a = 0; //Начало интервала, где рисуем график по оси Ox
+    double b = step; //Конец интервала, где рисуем график по оси Ox
+
+    x.push_back(step);
+    y.push_back(numberOfCells);
+
+    ui->graph->clearGraphs();//Если нужно, но очищаем все графики
+    //Добавляем один график в widget
+    ui->graph->addGraph();
+    //Говорим, что отрисовать нужно график по нашим двум массивам x и y
+    ui->graph->graph(0)->setData(x, y);
+
+    //Подписываем оси Ox и Oy
+    ui->graph->xAxis->setLabel("Шаг");
+    ui->graph->yAxis->setLabel("Количество клеток");
+
+    //Установим область, которая будет показываться на графике
+    ui->graph->xAxis->setRange(a, b);//Для оси Ox
+
+    double minY = 0;
+    double maxY = 400;
+
+    ui->graph->yAxis->setRange(minY, maxY);//Для оси Oy
+
+    //И перерисуем график на нашем widget
+    ui->graph->replot();
 }
 
 //Рисование "сетки"
@@ -118,7 +154,7 @@ void MainWindow::getData()
         //Для каждого элемента из строки
         for(int j = 0; j < sizeGrid; j++)
         {
-            if(list[j].toInt() == 1){array[j][i]=1;}// метка, что клетка живая
+            if(list[j].toInt() == 1){array[j][i]=1; numberOfCells++;}// метка, что клетка живая
             else array[j][i] = 0;//Заношу умирающие и мёртвые клетки в массив
         }
     }
@@ -163,9 +199,12 @@ void MainWindow::core()
             }
 
             if ((test1 && array[i][j] == 1)|| array[i][j] == 0)
-                newArray[i][j] = array[i][j];//Если тест пройден и клетка не умирающая или клетка уже мёртвая, то ничего не происходит
-            else
+                newArray[i][j] = array[i][j];//Если тест пройден или клетка уже мёртвая, то ничего не происходит
+            else{
                 newArray[i][j] = 0;//Если тест не пройден, то убиваем клетку
+                numberOfCells--;
+            }
+
 
             bool test2 = false;//Достаточно ли у клетки соседей, чтобы она родилась
 
@@ -176,8 +215,10 @@ void MainWindow::core()
             }
 
             //Если тест пройден и клетка мёртвая
-            if (test2 && array[i][j] == 0)
-                newArray[i][j] = 1;//То оживляем её с меткой живой клетки
+            if (test2 && array[i][j] == 0){
+                newArray[i][j] = 1;//То оживляем её
+                numberOfCells++;
+            }
             //Если тест не пройден, или клетка не свободна
             else if(array[i][j] == 0)
                 newArray[i][j] = 0;//то ничего не происходит

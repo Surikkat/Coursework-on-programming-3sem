@@ -33,6 +33,7 @@ private slots:
     void on_step_by_step_clicked();//Пошаговая симуляция
     void on_start_clicked();//Нажатие на кнопку запуска симуляции
     void on_stop_clicked();//Остановка симуляции
+    void drawGraph();
 
 private:
 
@@ -47,6 +48,9 @@ private:
     QString fileName;//Имя файла ввода данных
     int sizeGrid;//Размер поля
     bool haveData;//Полученны ли данные?
+    int numberOfCells;//Количество клеток на поле
+    int step;//Номер шага
+    QVector<double> x, y; //Массивы координат точек для графика
 };
 
 #endif // MAINWINDOW_H
